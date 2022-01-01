@@ -6,6 +6,8 @@ Automate transferring fit-Files from Garmin Connect to ZwiftPower for dual-recor
 * Python3
 * Python packages: cloudscraper, fitparse, garminconnect, lxml, numpy, pandas, requests
 
+Install requirements via `pip3 install -r requirements.txt`.
+
 ## Usage
 
 The script is simply run by executing it: `./dual-recording-gc.py` or `python3 dual-recording-gc.py`.
