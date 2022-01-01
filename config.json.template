@@ -1,0 +1,26 @@
+{
+  "zwiftpower": {
+    "username": "your-zwiftpower-username",
+    "password": "your-zwiftpower-password"
+  },
+  "garminconnect": {
+    "username": "your-garmin-connect-username",
+    "password": "your-garmin-connect-password"
+  },
+  "powermeters" : [
+    {
+      "matches": {
+        "manufacturer": "zwift"
+      },
+      "name": "The name of the power source connected to Zwift"
+    },
+    {
+      "matches": {
+        "manufacturer" : "garmin",
+        "garmin_product": "2787",
+        "serial_number": "3999631966"
+      },
+      "name": "The name of the power source connected to your Garmin device"
+    }
+  ]
+}
