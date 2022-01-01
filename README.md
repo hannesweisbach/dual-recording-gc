@@ -30,6 +30,12 @@ As far as I could tell fit-files from Zwift do not contain any information to id
 
 Fit-files from Garmin have more information. From the file `config.json.template` the script tries to match `manufacturer:garmin`, `garmin_product:2787` (Product ID for Garmin Vector 3` and `serial_number:3999631966` (redundant, as example only). You can analyze your fit-files using `fitdump`-utility from the `fitparse` python package or any other online fit-file analyzer to find matching criteria for your powermeter.
 
+## Issues
+
+Activities might not match correctly. Matching by name only is insufficient, because multiple activities might have the same name, for example by doing the same workout multiple times. To alleviate the situation somewhat, the scipt tries also to match the date of the activity. This might fail as false-negative and false-positive. Issues arise for example when event dates do not exactly match activity dates, for example when groups (A, B, …) start in intervals and therefor exact times do not match, only dates. Matching dates in not exact either, for example when an event start at exactly midnight, but a groups starts a couple of minutes after event start. In this case not even dates match.
+
+These issues arise when trying to determine if an activity has already dual-recoding data uploaded with it and if dual-recording data should be associated with a Zwift event.
+
 ## TODO
 * Add fallbacks if passwords are not found in config.json:
   - Keychain/password manager
