@@ -33,3 +33,4 @@ Fit-files from Garmin have more information. From the file `config.json.template
   - Keychain/password manager
   - Console promp
 * Automate dual-recording upload for any ZwiftPower entry, not just the latest one
+* Add another (fallback) backend to connect to Garmin Connect (for example gcexport).
