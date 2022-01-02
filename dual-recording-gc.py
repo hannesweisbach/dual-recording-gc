@@ -35,6 +35,14 @@ from urllib.parse import urlparse, parse_qsl
 import logging
 logging.basicConfig(level=logging.WARNING)
 
+
+def dates_close(t1: datetime.datetime,
+                t2: datetime.datetime,
+                td: datetime.timedelta = datetime.timedelta(minutes = 30)):
+  print(t1)
+  print(t2)
+  return (t1 - td < t2) and (t1 + td > t2)
+
 class Config(object):
   _ConfigFile: typing.Optional[str] = None
   _Config: typing.Optional[dict] = None
@@ -89,37 +97,21 @@ def powermeter_name(fitfile, powermeters) -> str:
   raise RuntimeError("Could not identify power meter")
 
 class ZwiftPower:
+  Event = collections.namedtuple('Event', ['date', 'title', 'id'])
+
   class Activity:
     def __init__(self, html_option, events):
       self._url = html_option.attrib.get('value')
       self._title_name = html_option.attrib.get('title_name')
       datestr, self._name = [part.strip() for part in html_option.text.split(' : ', 1)]
       self._date = datetime.datetime.fromisoformat(datestr.replace('/', '-'))
-      event_date = f"{self._date.strftime('%Y/%m/%d')}"
 
-      def event_name(e):
-        # oh boy, fragile as fuck.
-        return e.text.split(' - ', maxsplit = 1)[1].split(' [')[0]
-
-      # match events by name
-      event_candidates = list(filter(lambda evt : event_name(evt) in self._name, events))
-      print(f'{self._date} {self._name}')
+      event_candidates = list(filter(lambda evt : evt.title in self._name and dates_close(self.date, evt.date), events))
 
       for e in event_candidates:
-        print(f'  {e.text}')
+        print(f'  {e.title}')
 
-      # if this is ambiguous try to match by date too
-      if len(event_candidates) > 1:
-        event_date = f"{self._date.strftime('%Y/%m/%d')}"
-        print(f"More than one event Cadidate. Trying to match to date '{event_date}'")
-        event_candidates = list(filter(lambda e: e.text.startswith(event_date), event_candidates))
-
-      if len(event_candidates) == 1:
-        self._event_id = e.attrib.get('value')
-        self._event_name = e.text
-      else:
-        self._event_name = '0'
-        self._event_id = None
+      self._event = e[0] if len(event_candidates) == 1 else None
 
     @property
     @functools.cache
@@ -138,11 +130,11 @@ class ZwiftPower:
 
     @property
     def event_name(self):
-      return self._event_name
+      return self._event.name
 
     @property
     def event_id(self):
-      return self._event_id
+      return self._event.id
 
     @property
     def date(self):
@@ -176,9 +168,18 @@ class ZwiftPower:
     r = self.session.get('https://zwiftpower.com/analysis.php')
     #print(r.text)
     tree = html.fromstring(r.text)
-    events = tree.xpath('//div[@id="tab_main"]//select[@name="set_zwift_event_id"]/option')[1:]
+    html_events = tree.xpath('//div[@id="tab_main"]//select[@name="set_zwift_event_id"]/option')[1:]
+    def create_event(html_event):
+        datestr, raw_name = html_event.text.split(' - ', maxsplit = 1)
+        date = datetime.datetime.fromisoformat(datestr.replace('/', '-'))
+        name = raw_name.split(' [')[0]
+        id_ = html_event.attrib.get('value')
+        return ZwiftPower.Event(date, name, id_)
+
+    events = [create_event(e) for e in html_events]
     for e in events:
-      print(f'{e.text} {e.attrib.get("value")}')
+      print(f'{e.date} {e.title}')
+
     options = tree.xpath('//div[@id="tab_main"]//select[@name="zwift_activity_filename"]/option')
     return [ZwiftPower.Activity(option, events) for option in options[1:]]
 
@@ -384,8 +385,8 @@ def upload_dual_record_latest():
   dual_recorded = zp.list
   activity = zp.activities[0]
 
-  # match by name + date, but not time, since event time might differ from activity time due to group start delay
-  already_uploaded = [dr for dr in dual_recorded if activity.title_name == dr['title'] and activity.date.date() == dr['date'].date()]
+  # match by name + check if dates are 'close'
+  already_uploaded = [dr for dr in dual_recorded if activity.title_name == dr['title'] and dates_close(activity.date, dr['date'])]
   if len(already_uploaded):
     print(f"Newest activity already dual-powered:")
     print(f"activity:   '{activity.date} {activity.title_name}'")
