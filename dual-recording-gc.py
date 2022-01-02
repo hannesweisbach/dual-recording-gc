@@ -39,8 +39,6 @@ logging.basicConfig(level=logging.WARNING)
 def dates_close(t1: datetime.datetime,
                 t2: datetime.datetime,
                 td: datetime.timedelta = datetime.timedelta(minutes = 30)):
-  print(t1)
-  print(t2)
   return (t1 - td < t2) and (t1 + td > t2)
 
 class Config(object):
@@ -108,8 +106,10 @@ class ZwiftPower:
 
       event_candidates = list(filter(lambda evt : evt.title in self._name and dates_close(self.date, evt.date), events))
 
-      for e in event_candidates:
-        print(f'  {e.title}')
+      if len(event_candidates):
+        print(f'Event candidates for activity "{self.title_name}" @{self.date}')
+        for e in event_candidates:
+          print(f'  "{e.title}" @{e.date}')
 
       self._event = e[0] if len(event_candidates) == 1 else None
 
@@ -177,8 +177,10 @@ class ZwiftPower:
         return ZwiftPower.Event(date, name, id_)
 
     events = [create_event(e) for e in html_events]
+
+    print('Found these events:')
     for e in events:
-      print(f'{e.date} {e.title}')
+      print(f'  {e.date} {e.title}')
 
     options = tree.xpath('//div[@id="tab_main"]//select[@name="zwift_activity_filename"]/option')
     return [ZwiftPower.Activity(option, events) for option in options[1:]]
@@ -206,11 +208,14 @@ class ZwiftPower:
     }
     r = self.session.post('https://zwiftpower.com/api3.php', params = params)
     self.analysis_list = json.loads(r.text)['data']
+
     for e in self.analysis_list:
       e['date'] = datetime.datetime.fromtimestamp(int(e['date']))
+
+    print("Activities that already have dual recording data:")
     for e in self.analysis_list:
-      print(f"{e['date']} {e['title']}")
-    print(self.analysis_list)
+      print(f"  {e['date']} {e['title']}")
+
     return self.analysis_list
 
   def download_activity_interactive(self):
@@ -305,6 +310,7 @@ def download_gc_connect(date):
   if len(actlist) == 0:
     raise RuntimeError("No activities found on Garmin Connect. Aborting.")
 
+  # TODO: try matching by time too
   actid = actlist[0]['activityId']
   print(f"Download activity {actid}")
   zipped = client.download_activity(actid, Garmin.ActivityDownloadFormat.ORIGINAL)
