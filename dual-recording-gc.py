@@ -111,7 +111,7 @@ class ZwiftPower:
         for e in event_candidates:
           print(f'  "{e.title}" @{e.date}')
 
-      self._event = e[0] if len(event_candidates) == 1 else None
+      self._event = e[0] if len(event_candidates) == 1 else ZwiftPower.Event(date = None, title = "", id = "")
 
     @property
     @functools.cache
@@ -130,7 +130,7 @@ class ZwiftPower:
 
     @property
     def event_name(self):
-      return self._event.name
+      return self._event.title
 
     @property
     def event_id(self):
