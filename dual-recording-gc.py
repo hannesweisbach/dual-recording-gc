@@ -400,7 +400,9 @@ def syncronize_files(fixed, moving, fixup = True):
   static_shift = power_fixed[0, 0] - power_moving[0, 0]
   shift = static_shift + dynamic_shift
 
-  print(f"Shift: {static_shift} {dynamic_shift} {shift}")
+  print(f"Shift between start timestamps of files: {static_shift}")
+  print(f"Shift to matches power curves closest: {dynamic_shift}")
+  print(f"Total shift: {shift}")
 
   #plt.plot(power_fixed[:,1])
   #plt.plot(power_moving[shift:,1])
