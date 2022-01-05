@@ -324,7 +324,30 @@ def download_gc_connect(date):
 
   return fitfile
 
-def read_power_from_fit_file(infile, outfile = None):
+# fill "holes" in fit file due to 'smart recording'. This is required to align power curves.
+def fixup_fit_file(arr):
+  time_begin = arr[0, 0]
+  time_end = arr[-1, 0]
+  duration = time_end - time_begin
+  entries = arr.shape[0]
+
+
+  if (entries - 1) != duration:
+    print(f"Fixup enabled and required. Duration {duration}, Entries {entries}")
+    adjacent_differences = enumerate(np.diff(arr, axis = 0))
+    # filter out where timestamps are not 1s apart
+    holes = filter(lambda e: e[1][0] > 1, [(i, diff) for i, diff in adjacent_differences])
+    for i, diff in holes:
+      # generate fill values: incresing timestamps, but keep the power value
+      values = np.array([arr[i] + [seconds, 0] for seconds in range(1, diff[0])])
+      print(values)
+      arr = np.insert(arr, obj = i+1, values = values, axis = 0)
+  else:
+    print(f"Fixup not required.")
+
+  return arr
+
+def read_power_from_fit_file(infile, outfile = None, fixup = False):
   fitfile = infile if isinstance(infile, fitparse.FitFile) else fitparse.FitFile(infile)
   fitfile_fields = ((record.get_raw_value('timestamp'), record.get_value('power')) for record in fitfile.get_messages('record') if record.get_value('power') != 0)
   if outfile:
@@ -333,8 +356,10 @@ def read_power_from_fit_file(infile, outfile = None):
           output.write(f"{line[0]} {line[1]}")
     return outfile
   else:
-    return np.array([line for line in fitfile_fields], dtype = (int, int))
-
+    arr = np.array([line for line in fitfile_fields], dtype = (int, int))
+    if fixup:
+      arr = fixup_fit_file(arr)
+    return arr
 
 def ssd(v1, v2):
   # sum of squared differences
@@ -366,11 +391,9 @@ def find_min_overlap(fixed, moving):
 
   return shift - mlen
 
-
-def syncronize_files(fixed, moving):
-  power_fixed = read_power_from_fit_file(fixed)
-  power_moving = read_power_from_fit_file(moving)
-
+def syncronize_files(fixed, moving, fixup = True):
+  power_fixed = read_power_from_fit_file(fixed, fixup = fixup)
+  power_moving = read_power_from_fit_file(moving, fixup = fixup)
 
   dynamic_shift = find_min_overlap(fixed = power_fixed[:,1], moving = power_moving[:,1])
 
@@ -401,7 +424,7 @@ def upload_dual_record_latest():
     exit(1)
  
   garmin_fitfile = download_gc_connect(activity.date)
-  timediff = syncronize_files(fixed = activity.fitfile, moving = garmin_fitfile)
+  timediff = syncronize_files(fixed = activity.fitfile, moving = garmin_fitfile, fixup=True)
 
   zp.upload_secondary_power_source(activity, [(garmin_fitfile, timediff)])
 
