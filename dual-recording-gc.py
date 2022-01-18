@@ -96,6 +96,7 @@ def powermeter_name(fitfile, powermeters) -> str:
 
 class ZwiftPower:
   Event = collections.namedtuple('Event', ['date', 'title', 'id'])
+  _NoneEvent = Event(date = None, title = "", id = "")
 
   class Activity:
     def __init__(self, html_option, events):
@@ -104,14 +105,14 @@ class ZwiftPower:
       datestr, self._name = [part.strip() for part in html_option.text.split(' : ', 1)]
       self._date = datetime.datetime.fromisoformat(datestr.replace('/', '-'))
 
-      event_candidates = list(filter(lambda evt : evt.title in self._name and dates_close(self.date, evt.date), events))
+      event_candidates = list(filter(lambda evt : dates_close(self.date, evt.date), events))
 
       if len(event_candidates):
         print(f'Event candidates for activity "{self.title_name}" @{self.date}')
         for e in event_candidates:
           print(f'  "{e.title}" @{e.date}')
 
-      self._event = e[0] if len(event_candidates) == 1 else ZwiftPower.Event(date = None, title = "", id = "")
+      self._event = next(iter(event_candidates), ZwiftPower._NoneEvent)
 
     @property
     @functools.cache
