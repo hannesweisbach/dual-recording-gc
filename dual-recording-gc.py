@@ -335,14 +335,20 @@ def fixup_fit_file(arr):
 
   if (entries - 1) != duration:
     print(f"Fixup enabled and required. Duration {duration}, Entries {entries}")
-    adjacent_differences = enumerate(np.diff(arr, axis = 0))
+    adjacent_differences = np.diff(arr[:,0])
     # filter out where timestamps are not 1s apart
-    holes = filter(lambda e: e[1][0] > 1, [(i, diff) for i, diff in adjacent_differences])
-    for i, diff in holes:
+    indices = np.nonzero(adjacent_differences != 1)[0]
+    timestamps = arr[indices][:, 0]
+    gap_size = adjacent_differences[indices]
+    offset = 0
+    for i, ts, gap in zip(indices, timestamps, gap_size):
+      adjusted_index = i + offset
       # generate fill values: incresing timestamps, but keep the power value
-      values = np.array([arr[i] + [seconds, 0] for seconds in range(1, diff[0])])
-      print(values)
-      arr = np.insert(arr, obj = i+1, values = values, axis = 0)
+      values = np.array([arr[adjusted_index] + [seconds, 0] for seconds in range(1, gap)])
+      #print(f"Hole @{i}: {gap} {values.shape} offset: {offset}")
+      arr = np.insert(arr, obj = 1 + adjusted_index, values = values, axis = 0)
+      #arr grew - adjust indices of future infills
+      offset = offset + values.shape[0]
   else:
     print(f"Fixup not required.")
 
