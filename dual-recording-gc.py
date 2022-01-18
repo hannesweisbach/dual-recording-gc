@@ -356,7 +356,7 @@ def fixup_fit_file(arr):
 
 def read_power_from_fit_file(infile, outfile = None, fixup = False):
   fitfile = infile if isinstance(infile, fitparse.FitFile) else fitparse.FitFile(infile)
-  fitfile_fields = ((record.get_raw_value('timestamp'), record.get_value('power')) for record in fitfile.get_messages('record') if record.get_value('power') != 0)
+  fitfile_fields = ((record.get_raw_value('timestamp'), record.get_value('power')) for record in fitfile.get_messages('record'))
   if outfile:
     with open(outfile, 'w') as output:
         for line in fitfile_fields:
