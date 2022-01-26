@@ -25,7 +25,7 @@ import zipfile
 import numpy as np
 import pandas as pd
 
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 import requests
 from lxml import html
@@ -398,7 +398,7 @@ def find_min_overlap(fixed, moving):
 
   return shift - mlen
 
-def syncronize_files(fixed, moving, fixup = True):
+def syncronize_files(fixed, moving, fixup = True, plot = False):
   power_fixed = read_power_from_fit_file(fixed, fixup = fixup)
   power_moving = read_power_from_fit_file(moving, fixup = fixup)
 
@@ -411,13 +411,15 @@ def syncronize_files(fixed, moving, fixup = True):
   print(f"Shift to matches power curves closest: {dynamic_shift}")
   print(f"Total shift: {shift}")
 
-  #plt.plot(power_fixed[:,1])
-  #plt.plot(power_moving[shift:,1])
-  #plt.show()
+  if plot:
+    plt.plot(range(0, power_fixed.shape[0]), power_fixed[:,1], label = "Direto")
+    plt.plot(dynamic_shift + np.array(range(0, power_moving.shape[0])), power_moving[:,1], label = "Garmin")
+    plt.legend()
+    plt.show()
 
   return shift
 
-def upload_dual_record_latest():
+def upload_dual_record_latest(dryrun = False, plot = False):
   zp_user, zp_pass = Config.zwiftpower_credentials()
   zp = ZwiftPower(zp_user, zp_pass)
   dual_recorded = zp.list
@@ -433,9 +435,12 @@ def upload_dual_record_latest():
     exit(1)
  
   garmin_fitfile = download_gc_connect(activity.date)
-  timediff = syncronize_files(fixed = activity.fitfile, moving = garmin_fitfile, fixup=True)
 
-  zp.upload_secondary_power_source(activity, [(garmin_fitfile, timediff)])
+  timediff = syncronize_files(fixed = activity.fitfile, moving = garmin_fitfile, fixup=True, plot = plot)
+
+  if not dryrun:
+    zp.upload_secondary_power_source(activity, [(garmin_fitfile, timediff)])
+
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
