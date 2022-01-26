@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse
+import click
 import collections
 import datetime
 import functools
@@ -272,6 +272,10 @@ class ZwiftPower:
     params = { 'do': 'remove_set', 'set_id' : f'{setid}'}
     self.session.post('https://zwiftpower.com/analysis.php', params = params)
 
+@click.group()
+def cli():
+  pass
+
 def garmin_retry(func, text):
   while True:
     try:
@@ -441,19 +445,23 @@ def upload_dual_record_latest(dryrun = False, plot = False):
   if not dryrun:
     zp.upload_secondary_power_source(activity, [(garmin_fitfile, timediff)])
 
+@cli.command()
+@click.option("--dryrun", default=False, is_flag=True, help="Do not upload to ZP.")
+@click.option("--plot", default=False, is_flag=True, help="Show plot window of power graphs.")
+def latest(dryrun, plot):
+  upload_dual_record_latest(dryrun = dryrun, plot = plot)
+
+@cli.command()
+@click.option("--plot", default=False, is_flag=True, help="Show plot window of power graphs.")
+@click.option("--align", default=True, is_flag=True, help="Auto-align power curves.")
+@click.option("--trim", default=False, is_flag=True, help="Auto-trim power curve from Garmin Connect.")
+@click.argument("file1", type=click.File('rb'))
+@click.argument("file2", type=click.File('rb'))
+def analyse(plot, align, trim, file1, file2):
+    syncronize_files(file1, file2, plot = plot, fixup = align)
+
 
 if __name__ == "__main__":
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--latest')
-
-  #args = parser.parse_args()
-
   Config('config.json')
-
-  upload_dual_record_latest()
-  exit(0)
-
-  zp_user, zp_pass = Config.zwiftpower_credentials()
-  zp = ZwiftPower(zp_user, zp_pass)
-  activity = zp.download_activity_interactive()
+  cli()
 
